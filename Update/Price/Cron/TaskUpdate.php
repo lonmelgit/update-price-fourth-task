@@ -70,7 +70,7 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
 
             }
 
-            print_r($items);
+            //print_r($items);
             if(!empty($items)) {
 
                 $scopeConfig = $objectManager->get('\Magento\Framework\App\Config\ScopeConfigInterface');
@@ -85,7 +85,7 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
                     $product = $objectManager->create('Magento\Catalog\Model\Product')->load($productId);
                     $price = $product->getPrice();
 
-                    echo $price;
+                    //echo $price;
 
                     if($qty > $coreQtyValue) {
 
@@ -98,7 +98,7 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
                     }
 
                     $this->_helper->updatePrices($productId, $price);
-                    echo "--".$price;
+                    //echo "--".$price;
 
                 }
 

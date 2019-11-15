@@ -7,37 +7,47 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
 
 
 {
+    protected $scopeConfig;
     protected $_orderCollectionFactory;
+    protected $action;
+    protected $massUpdater;
+    protected $orderFactory;
+    protected $_productRepository;
 
-    protected $_helper;
 
     public function __construct(
         //\Magento\Framework\App\Action\Context $context,
-        \Update\Price\Helper\Data $_helper,
-        \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $orderCollectionFactory
+        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
+        \Magento\Catalog\Model\ResourceModel\Product\Action $action,
+        \Update\Price\Model\Updater\MassUpdater $massUpdater,
+        \Magento\Sales\Model\ResourceModel\Order\CollectionFactory $orderCollectionFactory,
+        \Magento\Sales\Model\OrderFactory $orderFactory,
+        \Magento\Catalog\Model\ProductFactory $productFactory
+
 
     ) {
 
-        $this->_helper=$_helper;
-        $this->_orderCollectionFactory = $orderCollectionFactory;
+        $this->scopeConfig =$scopeConfig;
+        $this->action = $action;
+        $this->massUpdater = $massUpdater;
+        $this->orderCollectionFactory = $orderCollectionFactory;
+        $this->orderFactory = $orderFactory;
+        $this->productFactory = $productFactory;
+
         //parent::__construct($context);
 
     }
 
-
     public function execute() {
 
-        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
         $items = array();
 
-        $collection = $this->_orderCollectionFactory->create()
+        $collection = $this->orderCollectionFactory->create()
             ->addAttributeToSelect('*');
 
         $from = date("Y-m-d H:i:s", time() - 12 * 60 * 60); // start date
         $to = date("Y-m-d H:i:s", time()); // end date
 
-
-        //echo $to.'--'.$from; exit;
         $collection->addFieldToFilter('created_at',
                 ['gteq' => $from]
             )
@@ -47,9 +57,9 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
 
             foreach ($collection as $order) {
 
-                $order->getId().'  ';
+                $order = $this->orderFactory->create()->load($order->getId());
 
-                $order = $objectManager->create('Magento\Sales\Model\Order')->load($order->getId());
+
                 $orderItems = $order->getAllItems();
                 foreach ($orderItems as $item)
                 {
@@ -70,35 +80,38 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
 
             }
 
-            //print_r($items);
+            print_r($items);
             if(!empty($items)) {
 
-                $scopeConfig = $objectManager->get('\Magento\Framework\App\Config\ScopeConfigInterface');
-
-                $coreQtyValue = $scopeConfig->getValue(
+                $coreQtyValue = $this->scopeConfig->getValue(
                     'updateprice/general/threshold_value',
                     \Magento\Store\Model\ScopeInterface::SCOPE_STORE
                 );
 
                 foreach($items as $productId => $qty) {
 
-                    $product = $objectManager->create('Magento\Catalog\Model\Product')->load($productId);
+                    $product = $this->productFactory->create()->load($productId);
+
                     $price = $product->getPrice();
 
-                    //echo $price;
+                    echo $price;
 
                     if($qty > $coreQtyValue) {
 
-                        $price = round(($price + ($price / 100) * 2),2);
-                        //echo "More";
-                    } else {
-                        $price = round(($price - ($price / 100) * 3),2);
+                        $newPrice = round(($price + ($price / 100) * 2),2);
 
-                       // echo "less";
+                        $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
+
+                    } else {
+                        $newPrice = round(($price - ($price / 100) * 3),2);
+
+                        $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
                     }
 
-                    $this->_helper->updatePrices($productId, $price);
-                    //echo "--".$price;
+                    $this->massUpdater->flushCache();
+                    $this->massUpdater->reindexAll();
+
+                    echo "--".$newPrice;
 
                 }
 
@@ -107,9 +120,6 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
         return $collection;
 
     }
-
-
-}
 
 
 

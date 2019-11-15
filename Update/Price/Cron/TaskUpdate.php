@@ -8,11 +8,11 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
 
 {
     protected $scopeConfig;
-    protected $_orderCollectionFactory;
+    protected $orderCollectionFactory;
     protected $action;
     protected $massUpdater;
     protected $orderFactory;
-    protected $_productRepository;
+    protected $productRepository;
 
 
     public function __construct(

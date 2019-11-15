@@ -108,16 +108,13 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
                         $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
                     }
 
-                    $this->massUpdater->flushCache();
-                    $this->massUpdater->reindexAll();
-
-                    echo "--".$newPrice;
-
+                    echo "--".$newPrice
                 }
-
+                
+                $this->massUpdater->flushCache();
+                $this->massUpdater->reindexAll();
+                
             }
-
-        return $collection;
 
     }
 

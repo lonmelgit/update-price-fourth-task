@@ -1,4 +1,5 @@
 <?php
+
 namespace Update\Price\Model\Updater;
 class MassUpdater
 {

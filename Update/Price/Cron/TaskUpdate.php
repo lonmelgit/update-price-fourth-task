@@ -25,9 +25,10 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
         \Magento\Catalog\Model\ProductFactory $productFactory
 
 
-    ) {
+    )
+    {
 
-        $this->scopeConfig =$scopeConfig;
+        $this->scopeConfig = $scopeConfig;
         $this->action = $action;
         $this->massUpdater = $massUpdater;
         $this->orderCollectionFactory = $orderCollectionFactory;
@@ -38,7 +39,8 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
 
     }
 
-    public function execute() {
+    public function execute()
+    {
 
         $items = array();
 
@@ -49,74 +51,79 @@ class TaskUpdate extends \Magento\Framework\View\Element\Template
         $to = date("Y-m-d H:i:s", time()); // end date
 
         $collection->addFieldToFilter('created_at',
-                ['gteq' => $from]
-            )
+            ['gteq' => $from]
+        )
             ->addFieldToFilter('created_at',
                 ['lteq' => $to]
             );
 
-            foreach ($collection as $order) {
+        foreach ($collection as $order) {
 
-                $order = $this->orderFactory->create()->load($order->getId());
+            $order = $this->orderFactory->create()->load($order->getId());
 
 
-                $orderItems = $order->getAllItems();
-                foreach ($orderItems as $item)
-                {
+            $orderItems = $order->getAllItems();
+            foreach ($orderItems as $item) {
 
-                    if ( $item->getProductType() == 'configurable' ) {
-                        continue;
-                    }
-                    $productId = $item->getProductId();
+                if ($item->getProductType() == 'configurable') {
+                    continue;
+                }
+                $productId = $item->getProductId();
 
-                    if(isset($items[$productId])) {
-                        $items[$productId] += (int)$item->getQtyOrdered();
+                if (isset($items[$productId])) {
+                    $items[$productId] += (int)$item->getQtyOrdered();
 
-                    } else {
-                        $items[$productId] = (int)$item->getQtyOrdered();
-                    }
+                } else {
+                    $items[$productId] = (int)$item->getQtyOrdered();
+                }
+            }
+
+
+        }
+
+        print_r($items);
+        if (!empty($items)) {
+
+            $coreQtyValue = $this->scopeConfig->getValue(
+                'updateprice/general/threshold_value',
+                \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+            );
+
+            foreach ($items as $productId => $qty) {
+
+                $product = $this->productFactory->create()->load($productId);
+
+                $price = $product->getPrice();
+
+                echo $price;
+
+                if ($qty > $coreQtyValue) {
+
+                    $newPrice = round(($price + ($price / 100) * 2), 2);
+
+                    $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
+
+                } else {
+                    $newPrice = round(($price - ($price / 100) * 3), 2);
+
+                    $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
                 }
 
 
+                echo "--" . $newPrice;
+
             }
 
-            print_r($items);
-            if(!empty($items)) {
+        }
 
-                $coreQtyValue = $this->scopeConfig->getValue(
-                    'updateprice/general/threshold_value',
-                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-                );
+        $this->massUpdater->flushCache();
+        $this->massUpdater->reindexAll();
 
-                foreach($items as $productId => $qty) {
-
-                    $product = $this->productFactory->create()->load($productId);
-
-                    $price = $product->getPrice();
-
-                    echo $price;
-
-                    if($qty > $coreQtyValue) {
-
-                        $newPrice = round(($price + ($price / 100) * 2),2);
-
-                        $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
-
-                    } else {
-                        $newPrice = round(($price - ($price / 100) * 3),2);
-
-                        $this->action->updateAttributes([$product->getId()], ['price' => $newPrice], $this->massUpdater->getStoreId());
-                    }
-
-                    echo "--".$newPrice
-                }
-                
-                $this->massUpdater->flushCache();
-                $this->massUpdater->reindexAll();
-                
-            }
 
     }
+
+
+}
 
 
 
